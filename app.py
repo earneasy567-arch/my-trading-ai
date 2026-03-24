@@ -1,70 +1,87 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Saurabh AI Scalper v11.1", layout="wide")
+st.set_page_config(page_title="Saurabh AI Ultimate Scalper", layout="wide")
 
-st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping Terminal v11.1</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping & Analysis Terminal</h1>", unsafe_allow_html=True)
 
-# 1. WATCHLIST (Sirf Crypto rakhte hain abhi testing ke liye kyunki ye turant load hota hai)
-WATCHLIST = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'DOGE-USD']
-
-def get_scalping_signal(symbol):
+# Function to get signals with error handling
+def get_analysis(symbol, interval="5m"):
     try:
-        # DATA FETCH (5 Minute Interval)
-        df = yf.download(symbol, period="1d", interval="5m", progress=False)
-        if df.empty or len(df) < 10: 
+        # Scalping ke liye 1 din ka data, 5-min interval pe
+        data = yf.download(symbol, period="1d", interval=interval, progress=False)
+        if data.empty:
             return None
         
-        # Simple Logic for testing
-        df['EMA9'] = df['Close'].ewm(span=9, adjust=False).mean()
-        df['EMA21'] = df['Close'].ewm(span=21, adjust=False).mean()
+        # Indicators
+        data['EMA9'] = data['Close'].ewm(span=9, adjust=False).mean()
+        data['EMA21'] = data['Close'].ewm(span=21, adjust=False).mean()
         
-        last = df.iloc[-1]
-        prev = df.iloc[-2]
+        last_price = float(data['Close'].iloc[-1])
+        ema9 = float(data['EMA9'].iloc[-1])
+        ema21 = float(data['EMA21'].iloc[-1])
         
-        # Signal Logic
-        signal = "WAIT"
-        if last['EMA9'] > last['EMA21']: 
-            signal = "BUY 🚀"
-        else:
-            signal = "SELL 📉"
+        # Logic
+        signal = "WAIT (No Trend)"
+        color = "white"
+        if ema9 > ema21:
+            signal = "BUY 🚀 (Bullish Trend)"
+            color = "#00FF00"
+        elif ema9 < ema21:
+            signal = "SELL 📉 (Bearish Trend)"
+            color = "#FF0000"
             
-        return {"Symbol": symbol, "Price": round(float(last['Close']), 2), "Signal": signal, "DF": df}
-    except Exception as e:
+        return {
+            "symbol": symbol,
+            "price": round(last_price, 2),
+            "signal": signal,
+            "color": color,
+            "tp": round(last_price * 1.01, 2) if ema9 > ema21 else round(last_price * 0.99, 2),
+            "sl": round(last_price * 0.995, 2) if ema9 > ema21 else round(last_price * 1.005, 2),
+            "df": data
+        }
+    except:
         return None
 
-# --- MAIN BUTTON ---
-if st.button("🔍 SCAN FOR INTRADAY SCALPING"):
-    with st.spinner("Market se live data nikal raha hu..."):
-        results = []
-        for s in WATCHLIST:
-            res = get_scalping_signal(s)
-            if res:
-                results.append(res)
-        
-        if not results:
-            st.error("Data nahi mil raha! Shayad internet slow hai ya API limit hit ho gayi hai.")
-        else:
-            st.subheader("🔥 Live Market Data (5-Min Candles)")
-            for item in results:
-                # Har coin ka alag box
-                with st.expander(f"{item['Symbol']} - Current Price: {item['Price']}", expanded=True):
-                    c1, c2 = st.columns([1, 2])
-                    
-                    with c1:
-                        st.write(f"### Signal: {item['Signal']}")
-                        st.write(f"**Target:** {item['Price'] * 1.01:.2f}")
-                        st.write(f"**Stop Loss:** {item['Price'] * 0.99:.2f}")
-                    
-                    with c2:
-                        # Chart hamesha dikhega
-                        fig, ax = plt.subplots(figsize=(8, 3))
-                        plt.style.use('dark_background')
-                        plt.plot(item['DF']['Close'].tail(20), color='cyan', label="Price")
-                        plt.title(f"{item['Symbol']} Trend")
-                        st.pyplot(fig)
+# --- UI TABS ---
+tab1, tab2, tab3 = st.tabs(["🇮🇳 Indian Market", "🌍 Forex/Global", "🪙 Crypto"])
 
+def display_market(watchlist):
+    if st.button(f"Scan {watchlist[0]} & Others"):
+        with st.spinner("Analyzing Market..."):
+            for s in watchlist:
+                res = get_analysis(s)
+                if res:
+                    with st.container():
+                        st.markdown(f"### {res['symbol']} - <span style='color:{res['color']}'>{res['signal']}</span>", unsafe_allow_html=True)
+                        c1, c2, c3, c4 = st.columns(4)
+                        c1.metric("LTP (Price)", res['price'])
+                        c2.metric("ENTRY", res['price'])
+                        c3.metric("TARGET", res['tp'])
+                        c4.metric("STOP LOSS", res['sl'])
+                        
+                        fig, ax = plt.subplots(figsize=(10, 2))
+                        plt.style.use('dark_background')
+                        plt.plot(res['df']['Close'].tail(30), color='cyan', label="Price")
+                        plt.plot(res['df']['EMA9'].tail(30), color='yellow', label="EMA9")
+                        st.pyplot(fig)
+                        st.markdown("---")
+                else:
+                    st.error(f"{s} ka data filhaal available nahi hai. Market closed ho sakta hai.")
+
+with tab1:
+    indian_watchlist = ['RELIANCE.NS', 'TATASTEEL.NS', 'SBIN.NS', 'INFY.NS', 'ADANIENT.NS']
+    display_market(indian_watchlist)
+
+with tab2:
+    forex_watchlist = ['EURUSD=X', 'GBPUSD=X', 'JPY=X', 'GOLD']
+    display_market(forex_watchlist)
+
+with tab3:
+    crypto_watchlist = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'DOGE-USD']
+    display_market(crypto_watchlist)
+
+st.sidebar.warning("Note: Indian market 3:30 PM pe band ho jata hai, uske baad signals nahi milenge.")
