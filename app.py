@@ -3,30 +3,26 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# --- 1. PRIVACY SETTINGS ---
-# Yahan apna pasand ka password rakhein
+# --- 1. PRIVACY & ACCESS ---
 YOUR_PASSWORD = "saurabh_trading" 
 
-st.set_page_config(page_title="Saurabh AI Secure Terminal", layout="wide")
+st.set_page_config(page_title="Saurabh AI Terminal v14", layout="wide")
 
-# Check Password
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+if "auth" not in st.session_state:
+    st.session_state.auth = False
 
-if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align:center;'>🔒 Private Terminal Access</h2>", unsafe_allow_html=True)
-    password_input = st.text_input("Enter Access Key:", type="password")
-    if st.button("Unlock"):
-        if password_input == YOUR_PASSWORD:
-            st.session_state.authenticated = True
+if not st.session_state.auth:
+    st.markdown("<h2 style='text-align:center;'>🔑 Private Access</h2>", unsafe_allow_html=True)
+    val = st.text_input("Enter Password:", type="password")
+    if st.button("Unlock Terminal"):
+        if val == YOUR_PASSWORD:
+            st.session_state.auth = True
             st.rerun()
         else:
-            st.error("Wrong Password! Access Denied.")
-    st.stop() # Yahan ruk jayega jab tak password sahi na ho
+            st.error("Galt Password!")
+    st.stop()
 
-# --- 2. MAIN APP STARTS HERE ---
-st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping & Search Pro</h1>", unsafe_allow_html=True)
-
+# --- 2. CORE ANALYSIS ENGINE ---
 def get_analysis(symbol, interval="5m"):
     try:
         data = yf.download(symbol, period="1d", interval=interval, progress=False)
@@ -43,18 +39,36 @@ def get_analysis(symbol, interval="5m"):
                 "sl": round(last_p * 0.996, 2) if ema9 > ema21 else round(last_p * 1.004, 2), "df": data}
     except: return None
 
-# --- SEARCH OPTION ---
-st.sidebar.header("🔍 Manual Search")
-search_sym = st.sidebar.text_input("Enter Symbol (e.g. BTC-USD, RELIANCE.NS, EURUSD=X)")
-if st.sidebar.button("Quick Analyze"):
-    res = get_analysis(search_sym)
-    if res:
-        st.sidebar.success(f"{res['sym']}: {res['sig']}")
-        st.sidebar.write(f"Price: {res['p']} | TP: {res['tp']} | SL: {res['sl']}")
-    else:
-        st.sidebar.error("Symbol not found!")
+# --- 3. MAIN UI ---
+st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping & Search Pro</h1>", unsafe_allow_html=True)
 
-# --- TABS FOR MARKETS ---
+# --- 🎯 GLOBAL SEARCH BOX (Ab Yeh Saamne Hai) ---
+st.markdown("### 🔍 Global Market Search")
+search_query = st.text_input("Stock ya Forex symbol daalein (e.g. BTC-USD, RELIANCE.NS, EURUSD=X, GOLD):", "")
+
+if search_query:
+    res = get_analysis(search_query)
+    if res:
+        st.success(f"Result mil gaya: {res['sym']}")
+        with st.container():
+            st.markdown(f"## {res['sym']} - <span style='color:{res['col']}'>{res['sig']}</span>", unsafe_allow_html=True)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("LTP", res['p'])
+            c2.metric("ENTRY", res['p'])
+            c3.metric("TARGET", res['tp'])
+            c4.metric("STOP LOSS", res['sl'])
+            
+            fig, ax = plt.subplots(figsize=(10, 3))
+            plt.style.use('dark_background')
+            plt.plot(res['df']['Close'].tail(40), color='cyan', label="Price")
+            plt.plot(res['df']['EMA9'].tail(40), color='yellow', label="EMA9")
+            st.pyplot(fig)
+    else:
+        st.error("Symbol sahi nahi hai. Indian stocks ke liye peeche .NS lagayein (e.g. SBIN.NS)")
+
+st.markdown("---")
+
+# --- 4. TABS FOR WATCHLISTS ---
 tab1, tab2, tab3 = st.tabs(["🇮🇳 Indian Market", "🌍 Forex/Global", "🪙 Crypto"])
 
 def render_market(watchlist):
@@ -64,15 +78,11 @@ def render_market(watchlist):
             if r:
                 with st.container():
                     st.markdown(f"### {r['sym']} - <span style='color:{r['col']}'>{r['sig']}</span>", unsafe_allow_html=True)
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.metric("LTP", r['p'])
-                    c2.metric("ENTRY", r['p'])
-                    c3.metric("TARGET", r['tp'])
-                    c4.metric("STOP LOSS", r['sl'])
-                    fig, ax = plt.subplots(figsize=(10, 2))
-                    plt.style.use('dark_background')
-                    plt.plot(r['df']['Close'].tail(30), color='cyan')
-                    st.pyplot(fig)
+                    cols = st.columns(4)
+                    cols[0].metric("LTP", r['p'])
+                    cols[1].metric("ENTRY", r['p'])
+                    cols[2].metric("TARGET", r['tp'])
+                    cols[3].metric("STOP LOSS", r['sl'])
                     st.markdown("---")
 
 with tab1: render_market(['RELIANCE.NS', 'TATASTEEL.NS', 'ADANIENT.NS'])
@@ -80,5 +90,5 @@ with tab2: render_market(['EURUSD=X', 'GBPUSD=X', 'GOLD'])
 with tab3: render_market(['BTC-USD', 'ETH-USD', 'SOL-USD'])
 
 if st.sidebar.button("Logout"):
-    st.session_state.authenticated = False
+    st.session_state.auth = False
     st.rerun()
