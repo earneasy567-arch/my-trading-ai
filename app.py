@@ -1,4 +1,4 @@
-import streamlit as st
+port streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -121,8 +121,4 @@ if st.button("RUN AI ANALYSIS"):
                 
                 plt.title(f"{symbol} - AI Trend Prediction")
                 plt.legend()
-                plt.grid(color='gray', linestyle='--', linewidth=0.3)
-                st.pyplot(plt)
-
-        except Exception as e:
-            st.error(f"Stock analysis failed. Error: {e}")
+                plt.grid(color='gray
