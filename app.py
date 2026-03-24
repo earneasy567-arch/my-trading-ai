@@ -1,7 +1,6 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import pandas_ta as ta
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
@@ -49,8 +48,16 @@ if st.button("RUN AI ANALYSIS"):
                 prediction_avg = future_predictions.mean()
                 
                 # 3. CALCULATE TECHNICALS (For Entry/SL)
-                df['RSI'] = ta.rsi(df['Close'], length=14)
-                df['ATR'] = ta.atr(data['High'], data['Low'], data['Close'], length=14)
+                # RSI Manual Calculation
+                delta = df['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                df['RSI'] = 100 - (100 / (1+rs))
+
+                # ATR Manual Calculation
+                high_low = data['High'] - data['Low']
+                df['ATR'] = high_low.rolling(window=14).mean()
                 
                 curr_price = float(df['Close'].iloc[-1])
                 rsi_val = float(df['RSI'].iloc[-1])
