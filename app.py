@@ -1,4 +1,4 @@
-import streamlit as st
+s st
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -131,5 +131,4 @@ st.sidebar.markdown("""
 ## AI Power explained:
 1. **Machine Learning:** Humara model 1 saal ka stock trend sikhta hai aur Linear Regression apply karke short-term future forecast karta hai.
 2. **Dynamic Stop Loss:** Hum fixed % use nahi karte. Hum ATR (Average True Range) indicator se current market 'shor' (volatility) calculate karte hain aur uske base par safer Stop Loss dete hain.
-3. **AI + Technicals:** Entry tabhi safe hoti hai jab AI prediction aur Technical Indicators (RSI, ATR) dono match karein.
-""")
+3. **AI + Technicals:** Entry tabhi safe hoti hai jab AI prediction aur Technical Indicators (RSI, ATR
