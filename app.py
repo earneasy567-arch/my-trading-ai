@@ -126,9 +126,3 @@ if st.button("RUN AI ANALYSIS"):
 
         except Exception as e:
             st.error(f"Stock analysis failed. Error: {e}")
-
-st.sidebar.markdown("""
-## AI Power explained:
-1. **Machine Learning:** Humara model 1 saal ka stock trend sikhta hai aur Linear Regression apply karke short-term future forecast karta hai.
-2. **Dynamic Stop Loss:** Hum fixed % use nahi karte. Hum ATR (Average True Range) indicator se current market 'shor' (volatility) calculate karte hain aur uske base par safer Stop Loss dete hain.
-3. **AI + Technicals:** Entry tabhi safe hoti hai jab AI prediction aur Technical Indicators (RSI, ATR""")
