@@ -3,85 +3,82 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Saurabh AI Ultimate Scalper", layout="wide")
+# --- 1. PRIVACY SETTINGS ---
+# Yahan apna pasand ka password rakhein
+YOUR_PASSWORD = "saurabh_trading" 
 
-st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping & Analysis Terminal</h1>", unsafe_allow_html=True)
+st.set_page_config(page_title="Saurabh AI Secure Terminal", layout="wide")
 
-# Function to get signals with error handling
+# Check Password
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("<h2 style='text-align:center;'>🔒 Private Terminal Access</h2>", unsafe_allow_html=True)
+    password_input = st.text_input("Enter Access Key:", type="password")
+    if st.button("Unlock"):
+        if password_input == YOUR_PASSWORD:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Wrong Password! Access Denied.")
+    st.stop() # Yahan ruk jayega jab tak password sahi na ho
+
+# --- 2. MAIN APP STARTS HERE ---
+st.markdown("<h1 style='text-align:center; color:#00FFCC;'>⚡ Saurabh AI Scalping & Search Pro</h1>", unsafe_allow_html=True)
+
 def get_analysis(symbol, interval="5m"):
     try:
-        # Scalping ke liye 1 din ka data, 5-min interval pe
         data = yf.download(symbol, period="1d", interval=interval, progress=False)
-        if data.empty:
-            return None
-        
-        # Indicators
+        if data.empty: return None
         data['EMA9'] = data['Close'].ewm(span=9, adjust=False).mean()
         data['EMA21'] = data['Close'].ewm(span=21, adjust=False).mean()
+        last_p = float(data['Close'].iloc[-1])
+        ema9, ema21 = float(data['EMA9'].iloc[-1]), float(data['EMA21'].iloc[-1])
         
-        last_price = float(data['Close'].iloc[-1])
-        ema9 = float(data['EMA9'].iloc[-1])
-        ema21 = float(data['EMA21'].iloc[-1])
-        
-        # Logic
-        signal = "WAIT (No Trend)"
-        color = "white"
-        if ema9 > ema21:
-            signal = "BUY 🚀 (Bullish Trend)"
-            color = "#00FF00"
-        elif ema9 < ema21:
-            signal = "SELL 📉 (Bearish Trend)"
-            color = "#FF0000"
-            
-        return {
-            "symbol": symbol,
-            "price": round(last_price, 2),
-            "signal": signal,
-            "color": color,
-            "tp": round(last_price * 1.01, 2) if ema9 > ema21 else round(last_price * 0.99, 2),
-            "sl": round(last_price * 0.995, 2) if ema9 > ema21 else round(last_price * 1.005, 2),
-            "df": data
-        }
-    except:
-        return None
+        sig = "BUY 🚀" if ema9 > ema21 else "SELL 📉"
+        col = "#00FF00" if ema9 > ema21 else "#FF0000"
+        return {"sym": symbol, "p": round(last_p, 2), "sig": sig, "col": col, 
+                "tp": round(last_p * 1.008, 2) if ema9 > ema21 else round(last_p * 0.992, 2),
+                "sl": round(last_p * 0.996, 2) if ema9 > ema21 else round(last_p * 1.004, 2), "df": data}
+    except: return None
 
-# --- UI TABS ---
+# --- SEARCH OPTION ---
+st.sidebar.header("🔍 Manual Search")
+search_sym = st.sidebar.text_input("Enter Symbol (e.g. BTC-USD, RELIANCE.NS, EURUSD=X)")
+if st.sidebar.button("Quick Analyze"):
+    res = get_analysis(search_sym)
+    if res:
+        st.sidebar.success(f"{res['sym']}: {res['sig']}")
+        st.sidebar.write(f"Price: {res['p']} | TP: {res['tp']} | SL: {res['sl']}")
+    else:
+        st.sidebar.error("Symbol not found!")
+
+# --- TABS FOR MARKETS ---
 tab1, tab2, tab3 = st.tabs(["🇮🇳 Indian Market", "🌍 Forex/Global", "🪙 Crypto"])
 
-def display_market(watchlist):
-    if st.button(f"Scan {watchlist[0]} & Others"):
-        with st.spinner("Analyzing Market..."):
-            for s in watchlist:
-                res = get_analysis(s)
-                if res:
-                    with st.container():
-                        st.markdown(f"### {res['symbol']} - <span style='color:{res['color']}'>{res['signal']}</span>", unsafe_allow_html=True)
-                        c1, c2, c3, c4 = st.columns(4)
-                        c1.metric("LTP (Price)", res['price'])
-                        c2.metric("ENTRY", res['price'])
-                        c3.metric("TARGET", res['tp'])
-                        c4.metric("STOP LOSS", res['sl'])
-                        
-                        fig, ax = plt.subplots(figsize=(10, 2))
-                        plt.style.use('dark_background')
-                        plt.plot(res['df']['Close'].tail(30), color='cyan', label="Price")
-                        plt.plot(res['df']['EMA9'].tail(30), color='yellow', label="EMA9")
-                        st.pyplot(fig)
-                        st.markdown("---")
-                else:
-                    st.error(f"{s} ka data filhaal available nahi hai. Market closed ho sakta hai.")
+def render_market(watchlist):
+    if st.button(f"Scan {watchlist[0]} List"):
+        for s in watchlist:
+            r = get_analysis(s)
+            if r:
+                with st.container():
+                    st.markdown(f"### {r['sym']} - <span style='color:{r['col']}'>{r['sig']}</span>", unsafe_allow_html=True)
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("LTP", r['p'])
+                    c2.metric("ENTRY", r['p'])
+                    c3.metric("TARGET", r['tp'])
+                    c4.metric("STOP LOSS", r['sl'])
+                    fig, ax = plt.subplots(figsize=(10, 2))
+                    plt.style.use('dark_background')
+                    plt.plot(r['df']['Close'].tail(30), color='cyan')
+                    st.pyplot(fig)
+                    st.markdown("---")
 
-with tab1:
-    indian_watchlist = ['RELIANCE.NS', 'TATASTEEL.NS', 'SBIN.NS', 'INFY.NS', 'ADANIENT.NS']
-    display_market(indian_watchlist)
+with tab1: render_market(['RELIANCE.NS', 'TATASTEEL.NS', 'ADANIENT.NS'])
+with tab2: render_market(['EURUSD=X', 'GBPUSD=X', 'GOLD'])
+with tab3: render_market(['BTC-USD', 'ETH-USD', 'SOL-USD'])
 
-with tab2:
-    forex_watchlist = ['EURUSD=X', 'GBPUSD=X', 'JPY=X', 'GOLD']
-    display_market(forex_watchlist)
-
-with tab3:
-    crypto_watchlist = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'DOGE-USD']
-    display_market(crypto_watchlist)
-
-st.sidebar.warning("Note: Indian market 3:30 PM pe band ho jata hai, uske baad signals nahi milenge.")
+if st.sidebar.button("Logout"):
+    st.session_state.authenticated = False
+    st.rerun()
