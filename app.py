@@ -135,20 +135,3 @@ with tab1:
                 if st.button(f"Close Trade {i}"):
                     st.session_state.balance += pnl
                     st.session_state.history.append({"Sym": t['sym'], "PnL": round(pnl, 2), "Time": datetime.now().strftime("%H:%M")})
-                    st.session_state.portfolio.pop(i)
-                    st.rerun()
-
-with tab2:
-    st.subheader("📰 Market Breaking News")
-    if search:
-        news_res = get_analysis(search)
-        if news_res and news_res['news']:
-            for n in news_res['news']:
-                st.markdown(f"**[{n.get('publisher', 'News')}]**: {n.get('title', 'No Title')}")
-                st.write(f"Link: {n.get('link', '#')}")
-                st.markdown("---")
-        else: st.write("No news found for this symbol.")
-
-with tab3:
-    if st.session_state.history:
-        st.table(pd.DataFrame(st.session_state.history))
